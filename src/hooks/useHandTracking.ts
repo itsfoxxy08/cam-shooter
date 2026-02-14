@@ -49,6 +49,12 @@ export function useHandTracking(videoRef: RefObject<HTMLVideoElement>, isTrackin
   const frozenY = useRef(0.5);
   const isShootingRef = useRef(false);
 
+  // Steady position tracking - last stable hand position
+  const steadyX = useRef(0.5);
+  const steadyY = useRef(0.5);
+  const lastX = useRef(0.5);
+  const lastY = useRef(0.5);
+
   const isGunGesture = useCallback((landmarks: any[]) => {
     // Landmarks:
     // 0: Wrist
@@ -118,24 +124,25 @@ export function useHandTracking(videoRef: RefObject<HTMLVideoElement>, isTrackin
 
   const detectBang = useCallback((landmarks: any[], timestamp: number) => {
     const thumbTipY = landmarks[4].y;
-    // Bang is detected by thumb moving down quickly (flick motion)
+    // Bang is detected by thumb moving UP quickly (flick motion - thumb goes UP not down!)
 
     const timeDelta = timestamp - lastTimestampRef.current;
 
     // We track thumb tip Y movement
-    // If thumb moves DOWN significantly and quickly -> BANG
+    // If thumb moves UP significantly and quickly -> BANG (Y decreases when moving up)
 
     if (timeDelta > 0 && lastTimestampRef.current > 0) {
-      // Positive velocityY = moving DOWN (y increases downward in normalized coords)
+      // NEGATIVE velocityY = moving UP (y decreases when moving upward in normalized coords)
       const velocityY = (thumbTipY - lastIndexYRef.current) / (timeDelta / 1000);
 
-      // Lowered threshold for easier shooting (was 0.8, now 0.5)
-      if (velocityY > 0.5 && !bangCooldownRef.current) {
+      // Detect UPWARD movement (negative velocity) - increased threshold for reliability
+      // Thumb must move UP quickly (velocity < -1.0 means moving upward fast)
+      if (velocityY < -1.0 && !bangCooldownRef.current) {
         bangCooldownRef.current = true;
         setTimeout(() => { bangCooldownRef.current = false; }, 500); // 500ms cooldown
         lastIndexYRef.current = thumbTipY;
         lastTimestampRef.current = timestamp;
-        console.log('BANG! Thumb flicker detected, velocity:', velocityY);
+        console.log('BANG! Thumb flicked UPWARD, velocity:', velocityY);
         return true;
       }
     }
@@ -217,11 +224,12 @@ export function useHandTracking(videoRef: RefObject<HTMLVideoElement>, isTrackin
               const targetX = 1 - lm[8].x;
               const targetY = lm[8].y;
 
-              // If shooting, freeze the crosshair position
+              // If shooting, freeze at the STEADY position (not current jittery position)
               if (bang && !isShootingRef.current) {
                 isShootingRef.current = true;
-                frozenX.current = currentX.current;
-                frozenY.current = currentY.current;
+                // Use steady position for shooting, not current position
+                frozenX.current = steadyX.current;
+                frozenY.current = steadyY.current;
 
                 // Unfreeze after shooting animation
                 setTimeout(() => {
@@ -234,6 +242,20 @@ export function useHandTracking(videoRef: RefObject<HTMLVideoElement>, isTrackin
                 // Smooth coordinates - faster smoothing for more responsive tracking
                 currentX.current = lerp(currentX.current, targetX, 0.3);
                 currentY.current = lerp(currentY.current, targetY, 0.3);
+
+                // Detect if hand is steady (not moving much)
+                const deltaX = Math.abs(currentX.current - lastX.current);
+                const deltaY = Math.abs(currentY.current - lastY.current);
+                const movement = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+                // If hand is steady (movement < threshold), update steady position
+                if (movement < 0.015) { // Very small movement threshold
+                  steadyX.current = currentX.current;
+                  steadyY.current = currentY.current;
+                }
+
+                lastX.current = currentX.current;
+                lastY.current = currentY.current;
               }
 
               // Use frozen position if shooting, otherwise current position

@@ -21,7 +21,7 @@ interface BulletState {
 }
 
 const HIT_RADIUS = 0.08; // % of screen (Increased slightly for easier hits)
-const HOVER_RADIUS = 0.12; // Slightly larger radius for hover detection
+const HOVER_RADIUS = 0.08; // Match hit radius - only glow when actually on target
 
 type GameState = 'start' | 'permission' | 'playing';
 
