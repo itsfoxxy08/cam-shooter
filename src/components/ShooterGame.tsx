@@ -96,19 +96,20 @@ export default function ShooterGame() {
   useEffect(() => {
     if (gameState !== 'playing') return;
 
-    if (timeRemaining <= 0) {
-      // Time's up - check if passed
-      stopBackgroundMusic();
-      setGameState('gameOver');
-      return;
-    }
-
     const timer = setInterval(() => {
-      setTimeRemaining(prev => prev - 1);
+      setTimeRemaining(prev => {
+        if (prev <= 1) {
+          // Time's up - trigger game over
+          stopBackgroundMusic();
+          setGameState('gameOver');
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [gameState, timeRemaining, stopBackgroundMusic]);
+  }, [gameState, stopBackgroundMusic]); // Removed timeRemaining from dependencies!
 
   // Detect if crosshair is hovering over a target
   useEffect(() => {
