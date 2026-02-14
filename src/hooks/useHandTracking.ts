@@ -39,6 +39,7 @@ export function useHandTracking(videoRef: RefObject<HTMLVideoElement>, isTrackin
   const lastIndexYRef = useRef<number>(0);
   const lastTimestampRef = useRef<number>(0);
   const bangCooldownRef = useRef<boolean>(false);
+  const lastVelocityRef = useRef<number>(0); // Track velocity for acceleration calculation
 
   // Refs for smoothing to avoid dependency loops in detection loop
   const currentX = useRef(0.5);
@@ -128,26 +129,35 @@ export function useHandTracking(videoRef: RefObject<HTMLVideoElement>, isTrackin
 
     const timeDelta = timestamp - lastTimestampRef.current;
 
-    // We track thumb tip Y movement
-    // If thumb moves UP significantly and quickly -> BANG (Y decreases when moving up)
-
     if (timeDelta > 0 && lastTimestampRef.current > 0) {
       // NEGATIVE velocityY = moving UP (y decreases when moving upward in normalized coords)
       const velocityY = (thumbTipY - lastIndexYRef.current) / (timeDelta / 1000);
 
-      // Log thumb movement for debugging
-      if (Math.abs(velocityY) > 0.3) {
-        console.log('Thumb velocity:', velocityY.toFixed(2), velocityY < 0 ? '(UP)' : '(DOWN)');
+      // Calculate acceleration for more reliable detection
+      const prevVelocity = lastVelocityRef.current || 0;
+      const acceleration = (velocityY - prevVelocity) / (timeDelta / 1000);
+      lastVelocityRef.current = velocityY;
+
+      // Log thumb movement for debugging (only significant movement)
+      if (Math.abs(velocityY) > 0.2) {
+        console.log('Thumb velocity:', velocityY.toFixed(2), velocityY < 0 ? '(UP)' : '(DOWN)',
+          'Accel:', acceleration.toFixed(2));
       }
 
-      // Detect UPWARD movement (negative velocity) - lowered threshold for easier detection
-      // Thumb must move UP quickly (velocity < -0.6 means moving upward fast)
-      if (velocityY < -0.6 && !bangCooldownRef.current) {
+      // OPTIMIZED: Detect UPWARD movement (negative velocity)
+      // Lowered threshold from -0.6 to -0.4 for easier, more responsive detection
+      // Also check for sudden acceleration upward for snap flicks
+      const isUpwardFlick = velocityY < -0.4;
+      const isSnapFlick = velocityY < -0.25 && acceleration < -5; // Sudden upward acceleration
+
+      if ((isUpwardFlick || isSnapFlick) && !bangCooldownRef.current) {
         bangCooldownRef.current = true;
-        setTimeout(() => { bangCooldownRef.current = false; }, 500); // 500ms cooldown
+        // Reduced cooldown from 500ms to 300ms for faster repeated shots
+        setTimeout(() => { bangCooldownRef.current = false; }, 300);
         lastIndexYRef.current = thumbTipY;
         lastTimestampRef.current = timestamp;
-        console.log('🎯 BANG! Thumb flicked UPWARD, velocity:', velocityY.toFixed(2));
+        console.log('🎯 BANG! Thumb flicked UPWARD, velocity:', velocityY.toFixed(2),
+          'accel:', acceleration.toFixed(2));
         return true;
       }
     }
@@ -250,9 +260,9 @@ export function useHandTracking(videoRef: RefObject<HTMLVideoElement>, isTrackin
 
               // Only update position if not currently shooting
               if (!isShootingRef.current) {
-                // Smooth coordinates - faster smoothing for more responsive tracking
-                currentX.current = lerp(currentX.current, targetX, 0.3);
-                currentY.current = lerp(currentY.current, targetY, 0.3);
+                // Smooth coordinates - OPTIMIZED: Increased from 0.3 to 0.5 for faster response
+                currentX.current = lerp(currentX.current, targetX, 0.5);
+                currentY.current = lerp(currentY.current, targetY, 0.5);
 
                 // Detect if hand is steady (not moving much)
                 const deltaX = Math.abs(currentX.current - lastX.current);

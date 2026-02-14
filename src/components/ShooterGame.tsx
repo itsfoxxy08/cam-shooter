@@ -46,9 +46,9 @@ export default function ShooterGame() {
   const [bullets, setBullets] = useState<BulletState[]>([]);
   const [isHoveringTarget, setIsHoveringTarget] = useState(false);
 
-  // Timer and shot tracking
+  // Timer and hit tracking
   const [timeRemaining, setTimeRemaining] = useState(GAME_DURATION);
-  const [shotsFired, setShotsFired] = useState(0);
+  const [targetsHit, setTargetsHit] = useState(0); // Changed from shotsFired - only counts successful hits
 
   const nextTargetIdRef = useRef(0);
   const nextBulletIdRef = useRef(0);
@@ -75,9 +75,9 @@ export default function ShooterGame() {
     setGameState('playing');
     // Start background music
     playBackgroundMusic();
-    // Reset timer and shots
+    // Reset timer and hits
     setTimeRemaining(GAME_DURATION);
-    setShotsFired(0);
+    setTargetsHit(0);
     setScore(0);
     setTargets([]);
     setBullets([]);
@@ -88,7 +88,7 @@ export default function ShooterGame() {
     setTargets([]);
     setBullets([]);
     setTimeRemaining(GAME_DURATION);
-    setShotsFired(0);
+    setTargetsHit(0);
     setGameState('ready'); // Go back to ready state, not permission
   };
 
@@ -157,9 +157,6 @@ export default function ShooterGame() {
     // Play shoot sound
     playShoot();
 
-    // Increment shots fired - ONLY ONCE per bang
-    setShotsFired(prev => prev + 1);
-
     // Create a bullet visual
     const newBullet = {
       id: nextBulletIdRef.current++,
@@ -183,8 +180,11 @@ export default function ShooterGame() {
         }
         return target;
       });
-      // Award 10 points per hit
-      if (hit) setScore(s => s + POINTS_PER_HIT);
+      // Award 10 points per hit AND increment targets hit counter
+      if (hit) {
+        setScore(s => s + POINTS_PER_HIT);
+        setTargetsHit(prev => prev + 1);
+      }
       return updated;
     });
   }, [handState.isBang, gameState, playShoot]);
@@ -197,24 +197,44 @@ export default function ShooterGame() {
   useEffect(() => {
     if (gameState !== 'playing') return;
 
+    const MIN_DISTANCE = 0.2; // Minimum distance between targets (20% of screen)
+
     const spawnTarget = () => {
-      const newTarget: TargetState = {
-        id: nextTargetIdRef.current++,
-        x: 0.15 + Math.random() * 0.7,
-        y: 0.2 + Math.random() * 0.6,
-        isHit: false,
-      };
-      setTargets(prev => {
-        const active = prev.filter(t => !t.isHit);
-        if (active.length >= 4) return prev;
-        return [...active, newTarget];
-      });
+      // Try to find a valid position (max 10 attempts)
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const newTarget: TargetState = {
+          id: nextTargetIdRef.current,
+          x: 0.15 + Math.random() * 0.7,
+          y: 0.2 + Math.random() * 0.6,
+          isHit: false,
+        };
+
+        // Check distance from all existing targets
+        const active = targets.filter(t => !t.isHit);
+        const tooClose = active.some(target => {
+          const dx = target.x - newTarget.x;
+          const dy = target.y - newTarget.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          return dist < MIN_DISTANCE;
+        });
+
+        // If not too close to any target, spawn it
+        if (!tooClose || active.length === 0) {
+          nextTargetIdRef.current++;
+          setTargets(prev => {
+            const currentActive = prev.filter(t => !t.isHit);
+            if (currentActive.length >= 4) return prev;
+            return [...currentActive, newTarget];
+          });
+          break;
+        }
+      }
     };
 
     spawnTarget();
     const interval = setInterval(spawnTarget, 2000);
     return () => clearInterval(interval);
-  }, [gameState]);
+  }, [gameState, targets]);
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-background">
@@ -227,7 +247,7 @@ export default function ShooterGame() {
         <ReadyScreen onBeginGame={handleBeginGame} />
       )}
       {gameState === 'gameOver' && (
-        <GameOverModal shotsFired={shotsFired} onRestart={handleRestart} />
+        <GameOverModal targetsHit={targetsHit} onRestart={handleRestart} />
       )}
 
       {/* Camera feed */}
@@ -264,10 +284,10 @@ export default function ShooterGame() {
             </div>
             <div className="w-px h-12 bg-cyan-400/30" />
             <div className="text-center">
-              <div className="text-cyan-400 text-sm font-semibold">SHOTS</div>
-              <div className={`text-4xl font-bold ${shotsFired >= MIN_SHOTS_REQUIRED ? 'text-green-400' : 'text-cyan-400'}`}
+              <div className="text-cyan-400 text-sm font-semibold">HITS</div>
+              <div className={`text-4xl font-bold ${targetsHit >= MIN_SHOTS_REQUIRED ? 'text-green-400' : 'text-cyan-400'}`}
                 style={{ textShadow: "0 0 10px currentColor" }}>
-                {shotsFired}/{MIN_SHOTS_REQUIRED}
+                {targetsHit}/{MIN_SHOTS_REQUIRED}
               </div>
             </div>
           </div>
