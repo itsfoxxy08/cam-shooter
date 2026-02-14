@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useHandTracking } from "@/hooks/useHandTracking";
 import { useAudio } from "@/hooks/useAudio";
+import { useFullscreen } from "@/hooks/useFullscreen";
 import Crosshair from "./Crosshair";
 import Target from "./Target";
 import GameHUD from "./GameHUD";
@@ -40,6 +41,7 @@ export default function ShooterGame() {
 
   const { handState, isLoading, error, permissionGranted } = useHandTracking(videoRef, isTrackingEnabled);
   const { playShoot, playBackgroundMusic, stopBackgroundMusic, toggleMute, isMuted } = useAudio();
+  const { isFullscreen, toggleFullscreen } = useFullscreen();
 
   const [score, setScore] = useState(0);
   const [targets, setTargets] = useState<TargetState[]>([]);
@@ -101,56 +103,40 @@ export default function ShooterGame() {
     setGameState('ready'); // Go back to ready state, not permission
   };
 
-  // Timer countdown - using ref-based approach for reliability
-  const gameStartTimeRef = useRef<number | null>(null);
-  const timerAnimFrameRef = useRef<number>(0);
-
+  // Simple, reliable timer countdown
   useEffect(() => {
-    console.log('⏱️ Timer useEffect running, gameState:', gameState);
-
+    // Only run timer when playing
     if (gameState !== 'playing') {
-      console.log('⏱️ Not playing, skipping timer');
-      gameStartTimeRef.current = null;
-      if (timerAnimFrameRef.current) {
-        cancelAnimationFrame(timerAnimFrameRef.current);
-      }
       return;
     }
 
-    // Record start time
-    gameStartTimeRef.current = Date.now();
-    console.log('⏱️ Timer started at:', gameStartTimeRef.current);
+    console.log('⏱️ TIMER STARTED');
 
-    const updateTimer = () => {
-      if (gameState !== 'playing' || !gameStartTimeRef.current) return;
+    // Simple interval that counts down every second
+    const intervalId = setInterval(() => {
+      setTimeRemaining((prevTime) => {
+        console.log('⏱️ Tick - current time:', prevTime);
 
-      const elapsed = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
-      const remaining = Math.max(0, GAME_DURATION - elapsed);
+        // If time is up
+        if (prevTime <= 1) {
+          console.log('⏱️ TIME IS UP!');
+          clearInterval(intervalId);
+          stopBackgroundMusic();
+          setGameState('gameOver');
+          return 0;
+        }
 
-      console.log('⏱️ Timer update - elapsed:', elapsed, 'remaining:', remaining);
-      setTimeRemaining(remaining);
+        // Decrease by 1 second
+        return prevTime - 1;
+      });
+    }, 1000); // Run every 1000ms (1 second)
 
-      if (remaining <= 0) {
-        console.log('⏱️ Time expired!');
-        stopBackgroundMusic();
-        setGameState('gameOver');
-        return;
-      }
-
-      // Continue updating
-      timerAnimFrameRef.current = requestAnimationFrame(updateTimer);
-    };
-
-    // Start the update loop
-    timerAnimFrameRef.current = requestAnimationFrame(updateTimer);
-
+    // Cleanup function
     return () => {
-      console.log('⏱️ Cleaning up timer');
-      if (timerAnimFrameRef.current) {
-        cancelAnimationFrame(timerAnimFrameRef.current);
-      }
+      console.log('⏱️ Timer cleaned up');
+      clearInterval(intervalId);
     };
-  }, [gameState, stopBackgroundMusic]);
+  }, [gameState, stopBackgroundMusic]); // Only re-run if gameState changes
 
   // Detect if crosshair is hovering over a target
   useEffect(() => {
@@ -222,11 +208,16 @@ export default function ShooterGame() {
         }
         return target;
       });
-      // Award 10 points per hit AND increment targets hit counter
+
       if (hit) {
+        // Hit a target: +10 points and increment hits counter
         setScore(s => s + POINTS_PER_HIT);
         setTargetsHit(prev => prev + 1);
+      } else {
+        // Missed shot: -10 points (but don't go below 0)
+        setScore(s => Math.max(0, s - 10));
       }
+
       return updated;
     });
   }, [handState.isBang, gameState, playShoot]);
@@ -289,7 +280,7 @@ export default function ShooterGame() {
         <ReadyScreen onBeginGame={handleBeginGame} />
       )}
       {gameState === 'gameOver' && (
-        <GameOverModal targetsHit={targetsHit} onRestart={handleRestart} />
+        <GameOverModal targetsHit={targetsHit} score={score} onRestart={handleRestart} />
       )}
 
       {/* Camera feed */}
@@ -333,10 +324,31 @@ export default function ShooterGame() {
               </div>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Crosshair - Always visible */}
+          {/* Fullscreen Button - Mobile friendly */}
+          {(gameState === 'playing' || gameState === 'ready') && (
+            <button
+              onClick={toggleFullscreen}
+              className="absolute bottom-8 right-8 z-50 bg-black/50 hover:bg-cyan-500/20 border-2 border-cyan-400 rounded-lg p-3 transition-all duration-200"
+              style={{ boxShadow: "0 0 15px rgba(0, 255, 255, 0.5)" }}
+              aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+            >
+              {isFullscreen ? (
+                // Compress icon (exit fullscreen)
+                <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M15 9h4.5M15 9V4.5M15 9l5.25-5.25M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+                </svg>
+              ) : (
+                // Expand icon (enter fullscreen)
+                <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5h-4m4 0v-4m0 4l-5-5" />
+                </svg>
+              )}
+            </button>
+          )}
+        </div>
+
+        {/* Crosshair */}- Always visible */}
       <Crosshair
         x={handState.crosshairX}
         y={handState.crosshairY}

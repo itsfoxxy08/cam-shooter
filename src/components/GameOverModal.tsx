@@ -2,10 +2,11 @@ import { memo } from "react";
 
 interface GameOverModalProps {
     targetsHit: number;
+    score: number;
     onRestart: () => void;
 }
 
-const GameOverModal = memo(({ targetsHit, onRestart }: GameOverModalProps) => {
+const GameOverModal = memo(({ targetsHit, score, onRestart }: GameOverModalProps) => {
     const minHits = 10;
 
     // Star rating system
@@ -44,8 +45,8 @@ const GameOverModal = memo(({ targetsHit, onRestart }: GameOverModalProps) => {
                 </h2>
 
                 {/* Rating text */}
-                <p className={`text-center text-2xl font-bold mb-4 ${passed ? 'text-green-400' : 'text-red-400'
-                    }`}>
+                <p className={`text - center text - 2xl font - bold mb - 4 ${passed ? 'text-green-400' : 'text-red-400'
+                    } `}>
                     {rating}
                 </p>
 
@@ -54,7 +55,7 @@ const GameOverModal = memo(({ targetsHit, onRestart }: GameOverModalProps) => {
                     {[1, 2, 3, 4, 5].map((starNum) => (
                         <span
                             key={starNum}
-                            className={`text-4xl ${starNum <= stars ? 'text-yellow-400' : 'text-gray-600'}`}
+                            className={`text - 4xl ${starNum <= stars ? 'text-yellow-400' : 'text-gray-600'} `}
                             style={starNum <= stars ? {
                                 textShadow: "0 0 10px rgba(250, 204, 21, 0.8)",
                                 filter: "drop-shadow(0 0 5px rgba(250, 204, 21, 0.5))"
@@ -65,45 +66,53 @@ const GameOverModal = memo(({ targetsHit, onRestart }: GameOverModalProps) => {
                     ))}
                 </div>
 
+
                 <div className="space-y-4 mb-8">
                     <div className="bg-black/50 border border-cyan-400/30 rounded p-4">
                         <div className="flex justify-between items-center mb-2">
                             <span className="text-gray-300">Targets Hit:</span>
-                            <span className={`text-2xl font-bold ${passed ? 'text-green-400' : 'text-red-400'}`}>
+                            <span className={`text - 2xl font - bold ${passed ? 'text-green-400' : 'text-red-400'} `}>
                                 {targetsHit}
                             </span>
                         </div>
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center mb-2">
                             <span className="text-gray-300">Required:</span>
                             <span className="text-xl font-bold text-cyan-400">{minHits}</span>
                         </div>
+                        <div className="flex justify-between items-center pt-2 border-t border-cyan-400/20">
+                            <span className="text-gray-300">Final Score:</span>
+                            <span className="text-2xl font-bold text-yellow-400"
+                                style={{ textShadow: "0 0 10px rgba(250, 204, 21, 0.6)" }}>
+                                {score}
+                            </span>
+                        </div>
                     </div>
-
-                    {!passed && (
-                        <div className="bg-red-900/30 border border-red-500/50 rounded p-4 text-center">
-                            <p className="text-red-300 font-semibold">
-                                ⚠️ Failed! You needed {minHits - targetsHit} more hit{minHits - targetsHit !== 1 ? 's' : ''}!
-                            </p>
-                        </div>
-                    )}
-
-                    {passed && (
-                        <div className="bg-green-900/30 border border-green-500/50 rounded p-4 text-center">
-                            <p className="text-green-300 font-semibold">
-                                ✅ Challenge Complete! {targetsHit - minHits} bonus hit{targetsHit - minHits !== 1 ? 's' : ''}!
-                            </p>
-                        </div>
-                    )}
                 </div>
 
-                <button
-                    onClick={onRestart}
-                    className="w-full bg-cyan-500 hover:bg-cyan-600 text-black font-bold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-cyan-400/50"
-                    style={{ boxShadow: "0 0 20px rgba(0, 255, 255, 0.5)" }}
-                >
-                    {passed ? "🔄 PLAY AGAIN" : "Try Again"}
-                </button>
+                {!passed && (
+                    <div className="bg-red-900/30 border border-red-500/50 rounded p-4 text-center">
+                        <p className="text-red-300 font-semibold">
+                            ⚠️ Failed! You needed {minHits - targetsHit} more hit{minHits - targetsHit !== 1 ? 's' : ''}!
+                        </p>
+                    </div>
+                )}
+
+                {passed && (
+                    <div className="bg-green-900/30 border border-green-500/50 rounded p-4 text-center">
+                        <p className="text-green-300 font-semibold">
+                            ✅ Challenge Complete! {targetsHit - minHits} bonus hit{targetsHit - minHits !== 1 ? 's' : ''}!
+                        </p>
+                    </div>
+                )}
             </div>
+
+            <button
+                onClick={onRestart}
+                className="w-full bg-cyan-500 hover:bg-cyan-600 text-black font-bold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-cyan-400/50"
+                style={{ boxShadow: "0 0 20px rgba(0, 255, 255, 0.5)" }}
+            >
+                {passed ? "🔄 PLAY AGAIN" : "Try Again"}
+            </button>
         </div>
     );
 });
