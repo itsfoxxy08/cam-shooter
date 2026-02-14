@@ -6,6 +6,7 @@ interface HandState {
   crosshairX: number;
   crosshairY: number;
   isBang: boolean;
+  isShooting: boolean; // New: indicates shooting animation in progress
   rawX: number;
   rawY: number;
 }
@@ -13,6 +14,7 @@ interface HandState {
 // Low-pass filter for smoothing (0.1 = very smooth/slow, 0.9 = responsive/jittery)
 // Using 0.3 for hand tracking and 0.15 for return-to-center for optimal 60fps smoothness
 const SMOOTHING_FACTOR = 0.3;
+const SHOOTING_FREEZE_DURATION = 400; // ms to freeze crosshair during shooting
 
 function lerp(start: number, end: number, factor: number) {
   return start + (end - start) * factor;
@@ -24,6 +26,7 @@ export function useHandTracking(videoRef: RefObject<HTMLVideoElement>, isTrackin
     crosshairX: 0.5,
     crosshairY: 0.5,
     isBang: false,
+    isShooting: false,
     rawX: 0.5,
     rawY: 0.5,
   });
@@ -40,6 +43,11 @@ export function useHandTracking(videoRef: RefObject<HTMLVideoElement>, isTrackin
   // Refs for smoothing to avoid dependency loops in detection loop
   const currentX = useRef(0.5);
   const currentY = useRef(0.5);
+
+  // Frozen position during shooting
+  const frozenX = useRef(0.5);
+  const frozenY = useRef(0.5);
+  const isShootingRef = useRef(false);
 
   const isGunGesture = useCallback((landmarks: any[]) => {
     // Landmarks:
@@ -195,6 +203,7 @@ export function useHandTracking(videoRef: RefObject<HTMLVideoElement>, isTrackin
             // Safe check for handle
             if (!handLandmarkerRef.current) return;
 
+
             const results = handLandmarkerRef.current.detectForVideo(video, now);
 
             if (results && results.landmarks && results.landmarks.length > 0) {
@@ -208,29 +217,52 @@ export function useHandTracking(videoRef: RefObject<HTMLVideoElement>, isTrackin
               const targetX = 1 - lm[8].x;
               const targetY = lm[8].y;
 
-              // Smooth coordinates - faster smoothing for more responsive tracking
-              currentX.current = lerp(currentX.current, targetX, 0.3);
-              currentY.current = lerp(currentY.current, targetY, 0.3);
+              // If shooting, freeze the crosshair position
+              if (bang && !isShootingRef.current) {
+                isShootingRef.current = true;
+                frozenX.current = currentX.current;
+                frozenY.current = currentY.current;
+
+                // Unfreeze after shooting animation
+                setTimeout(() => {
+                  isShootingRef.current = false;
+                }, SHOOTING_FREEZE_DURATION);
+              }
+
+              // Only update position if not currently shooting
+              if (!isShootingRef.current) {
+                // Smooth coordinates - faster smoothing for more responsive tracking
+                currentX.current = lerp(currentX.current, targetX, 0.3);
+                currentY.current = lerp(currentY.current, targetY, 0.3);
+              }
+
+              // Use frozen position if shooting, otherwise current position
+              const displayX = isShootingRef.current ? frozenX.current : currentX.current;
+              const displayY = isShootingRef.current ? frozenY.current : currentY.current;
 
               setHandState({
                 isGunGesture: gunDetected,
-                crosshairX: currentX.current,
-                crosshairY: currentY.current,
+                crosshairX: displayX,
+                crosshairY: displayY,
                 isBang: bang,
+                isShooting: isShootingRef.current,
                 rawX: targetX,
                 rawY: targetY
               });
             } else {
-              // Hand lost - smoothly return crosshair to center
-              currentX.current = lerp(currentX.current, 0.5, 0.15);
-              currentY.current = lerp(currentY.current, 0.5, 0.15);
+              // Hand lost - smoothly return crosshair to center (only if not shooting)
+              if (!isShootingRef.current) {
+                currentX.current = lerp(currentX.current, 0.5, 0.15);
+                currentY.current = lerp(currentY.current, 0.5, 0.15);
+              }
 
               setHandState(prev => ({
                 ...prev,
                 isGunGesture: false,
                 isBang: false,
-                crosshairX: currentX.current,
-                crosshairY: currentY.current
+                isShooting: isShootingRef.current,
+                crosshairX: isShootingRef.current ? frozenX.current : currentX.current,
+                crosshairY: isShootingRef.current ? frozenY.current : currentY.current
               }));
             }
           }
