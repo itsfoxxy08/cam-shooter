@@ -135,14 +135,19 @@ export function useHandTracking(videoRef: RefObject<HTMLVideoElement>, isTrackin
       // NEGATIVE velocityY = moving UP (y decreases when moving upward in normalized coords)
       const velocityY = (thumbTipY - lastIndexYRef.current) / (timeDelta / 1000);
 
-      // Detect UPWARD movement (negative velocity) - increased threshold for reliability
-      // Thumb must move UP quickly (velocity < -1.0 means moving upward fast)
-      if (velocityY < -1.0 && !bangCooldownRef.current) {
+      // Log thumb movement for debugging
+      if (Math.abs(velocityY) > 0.3) {
+        console.log('Thumb velocity:', velocityY.toFixed(2), velocityY < 0 ? '(UP)' : '(DOWN)');
+      }
+
+      // Detect UPWARD movement (negative velocity) - lowered threshold for easier detection
+      // Thumb must move UP quickly (velocity < -0.6 means moving upward fast)
+      if (velocityY < -0.6 && !bangCooldownRef.current) {
         bangCooldownRef.current = true;
         setTimeout(() => { bangCooldownRef.current = false; }, 500); // 500ms cooldown
         lastIndexYRef.current = thumbTipY;
         lastTimestampRef.current = timestamp;
-        console.log('BANG! Thumb flicked UPWARD, velocity:', velocityY);
+        console.log('🎯 BANG! Thumb flicked UPWARD, velocity:', velocityY.toFixed(2));
         return true;
       }
     }
@@ -231,9 +236,15 @@ export function useHandTracking(videoRef: RefObject<HTMLVideoElement>, isTrackin
                 frozenX.current = steadyX.current;
                 frozenY.current = steadyY.current;
 
+                console.log('🔒 Crosshair FROZEN at steady position:', {
+                  x: steadyX.current.toFixed(3),
+                  y: steadyY.current.toFixed(3)
+                });
+
                 // Unfreeze after shooting animation
                 setTimeout(() => {
                   isShootingRef.current = false;
+                  console.log('🔓 Crosshair UNFROZEN, resuming tracking');
                 }, SHOOTING_FREEZE_DURATION);
               }
 

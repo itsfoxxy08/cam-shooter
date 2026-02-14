@@ -13,21 +13,21 @@ const Crosshair = memo(({ x, y, visible, isHoveringTarget }: CrosshairProps) => 
   const baseDotOpacity = visible ? "opacity-90" : "opacity-35";
   const baseLineOpacity = visible ? "opacity-50" : "opacity-15";
 
-  // Hover state - glowing, bigger, animated, darker
+  // Hover state - darker, bigger, NO animations
   const hoverRingClasses = isHoveringTarget
-    ? "w-20 h-20 border-4 opacity-100 animate-pulse shadow-[0_0_20px_rgba(var(--primary-rgb),0.8)]"
+    ? "w-20 h-20 border-4 opacity-100 shadow-[0_0_15px_rgba(var(--primary-rgb),0.6)]"
     : `w-16 h-16 border-2 ${baseActiveOpacity}`;
 
   const hoverDotClasses = isHoveringTarget
-    ? "w-3 h-3 opacity-100 animate-ping"
+    ? "w-3 h-3 opacity-100"
     : `w-2 h-2 ${baseDotOpacity}`;
 
   const hoverLineClasses = isHoveringTarget
-    ? "opacity-90 scale-125"
+    ? "opacity-100 scale-110"
     : baseLineOpacity;
 
   const hoverGlow = isHoveringTarget
-    ? "drop-shadow-[0_0_8px_rgba(var(--primary-rgb),1)]"
+    ? "drop-shadow-[0_0_10px_rgba(var(--primary-rgb),0.8)]"
     : "";
 
   return (
