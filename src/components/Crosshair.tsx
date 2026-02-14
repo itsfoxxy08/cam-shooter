@@ -4,17 +4,35 @@ interface CrosshairProps {
   x: number;
   y: number;
   visible: boolean;
+  isHoveringTarget: boolean;
 }
 
-const Crosshair = memo(({ x, y, visible }: CrosshairProps) => {
-  // Always render crosshair, but change appearance based on gun detection
-  const activeOpacity = visible ? "opacity-80" : "opacity-30";
-  const dotOpacity = visible ? "opacity-100" : "opacity-40";
-  const lineOpacity = visible ? "opacity-60" : "opacity-20";
+const Crosshair = memo(({ x, y, visible, isHoveringTarget }: CrosshairProps) => {
+  // Base opacity - slightly lower as requested
+  const baseActiveOpacity = visible ? "opacity-70" : "opacity-25";
+  const baseDotOpacity = visible ? "opacity-90" : "opacity-35";
+  const baseLineOpacity = visible ? "opacity-50" : "opacity-15";
+
+  // Hover state - glowing, bigger, animated, darker
+  const hoverRingClasses = isHoveringTarget
+    ? "w-20 h-20 border-4 opacity-100 animate-pulse shadow-[0_0_20px_rgba(var(--primary-rgb),0.8)]"
+    : `w-16 h-16 border-2 ${baseActiveOpacity}`;
+
+  const hoverDotClasses = isHoveringTarget
+    ? "w-3 h-3 opacity-100 animate-ping"
+    : `w-2 h-2 ${baseDotOpacity}`;
+
+  const hoverLineClasses = isHoveringTarget
+    ? "opacity-90 scale-125"
+    : baseLineOpacity;
+
+  const hoverGlow = isHoveringTarget
+    ? "drop-shadow-[0_0_8px_rgba(var(--primary-rgb),1)]"
+    : "";
 
   return (
     <div
-      className="fixed pointer-events-none z-30 transition-all duration-100"
+      className={`fixed pointer-events-none z-30 transition-all duration-200 ${hoverGlow}`}
       style={{
         left: `${x * 100}%`,
         top: `${y * 100}%`,
@@ -22,14 +40,17 @@ const Crosshair = memo(({ x, y, visible }: CrosshairProps) => {
       }}
     >
       {/* Outer ring */}
-      <div className={`absolute w-16 h-16 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-primary neon-border ${activeOpacity}`} />
+      <div className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-primary neon-border transition-all duration-200 ${hoverRingClasses}`} />
       {/* Inner dot */}
-      <div className={`absolute w-2 h-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary ${dotOpacity}`} style={{ boxShadow: visible ? "var(--neon-glow)" : "none" }} />
+      <div
+        className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary transition-all duration-200 ${hoverDotClasses}`}
+        style={{ boxShadow: (visible || isHoveringTarget) ? "var(--neon-glow)" : "none" }}
+      />
       {/* Cross lines */}
-      <div className={`absolute w-6 h-0.5 bg-primary -translate-x-[calc(50%+20px)] -translate-y-1/2 ${lineOpacity}`} />
-      <div className={`absolute w-6 h-0.5 bg-primary translate-x-[8px] -translate-y-1/2 ${lineOpacity}`} />
-      <div className={`absolute h-6 w-0.5 bg-primary -translate-x-1/2 -translate-y-[calc(50%+20px)] ${lineOpacity}`} />
-      <div className={`absolute h-6 w-0.5 bg-primary -translate-x-1/2 translate-y-[8px] ${lineOpacity}`} />
+      <div className={`absolute w-6 h-0.5 bg-primary -translate-x-[calc(50%+20px)] -translate-y-1/2 transition-all duration-200 ${hoverLineClasses}`} />
+      <div className={`absolute w-6 h-0.5 bg-primary translate-x-[8px] -translate-y-1/2 transition-all duration-200 ${hoverLineClasses}`} />
+      <div className={`absolute h-6 w-0.5 bg-primary -translate-x-1/2 -translate-y-[calc(50%+20px)] transition-all duration-200 ${hoverLineClasses}`} />
+      <div className={`absolute h-6 w-0.5 bg-primary -translate-x-1/2 translate-y-[8px] transition-all duration-200 ${hoverLineClasses}`} />
     </div>
   );
 });

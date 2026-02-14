@@ -107,26 +107,27 @@ export function useHandTracking(videoRef: RefObject<HTMLVideoElement>, isTrackin
     return validIndex && otherFingersfolded;
   }, []);
 
+
   const detectBang = useCallback((landmarks: any[], timestamp: number) => {
     const thumbTipY = landmarks[4].y;
-    // Bang is usually thumb going down (y increasing)
-    // Or just a sudden movement of the thumb tip relative to the index finger or wrist
+    // Bang is detected by thumb moving down quickly (flick motion)
 
     const timeDelta = timestamp - lastTimestampRef.current;
 
-    // We track thumb tip Y
+    // We track thumb tip Y movement
     // If thumb moves DOWN significantly and quickly -> BANG
 
     if (timeDelta > 0 && lastTimestampRef.current > 0) {
-      // Positive velocityY = moving DOWN
+      // Positive velocityY = moving DOWN (y increases downward in normalized coords)
       const velocityY = (thumbTipY - lastIndexYRef.current) / (timeDelta / 1000);
 
-      // Threshold for "Bang"
-      if (velocityY > 0.8 && !bangCooldownRef.current) {
+      // Lowered threshold for easier shooting (was 0.8, now 0.5)
+      if (velocityY > 0.5 && !bangCooldownRef.current) {
         bangCooldownRef.current = true;
-        setTimeout(() => { bangCooldownRef.current = false; }, 300); // 300ms cooldown
+        setTimeout(() => { bangCooldownRef.current = false; }, 500); // 500ms cooldown
         lastIndexYRef.current = thumbTipY;
         lastTimestampRef.current = timestamp;
+        console.log('BANG! Thumb flicker detected, velocity:', velocityY);
         return true;
       }
     }

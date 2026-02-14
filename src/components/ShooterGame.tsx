@@ -21,6 +21,7 @@ interface BulletState {
 }
 
 const HIT_RADIUS = 0.08; // % of screen (Increased slightly for easier hits)
+const HOVER_RADIUS = 0.12; // Slightly larger radius for hover detection
 
 type GameState = 'start' | 'permission' | 'playing';
 
@@ -36,6 +37,7 @@ export default function ShooterGame() {
   const [score, setScore] = useState(0);
   const [targets, setTargets] = useState<TargetState[]>([]);
   const [bullets, setBullets] = useState<BulletState[]>([]);
+  const [isHoveringTarget, setIsHoveringTarget] = useState(false);
 
   const nextTargetIdRef = useRef(0);
   const nextBulletIdRef = useRef(0);
@@ -78,6 +80,27 @@ export default function ShooterGame() {
 
     return () => clearInterval(interval);
   }, [gameState, isLoading, error]);
+
+  // Detect if crosshair is hovering over a target
+  useEffect(() => {
+    if (gameState !== 'playing') {
+      setIsHoveringTarget(false);
+      return;
+    }
+
+    const checkHover = () => {
+      const isNearTarget = targets.some(target => {
+        if (target.isHit) return false;
+        const dx = target.x - handState.crosshairX;
+        const dy = target.y - handState.crosshairY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        return dist < HOVER_RADIUS;
+      });
+      setIsHoveringTarget(isNearTarget);
+    };
+
+    checkHover();
+  }, [handState.crosshairX, handState.crosshairY, targets, gameState]);
 
   // Clean up hit targets after animation
   useEffect(() => {
@@ -159,6 +182,7 @@ export default function ShooterGame() {
         x={handState.crosshairX}
         y={handState.crosshairY}
         visible={handState.isGunGesture}
+        isHoveringTarget={isHoveringTarget}
       />
 
       {/* Game Content - Only show when playing */}
