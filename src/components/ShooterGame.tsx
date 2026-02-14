@@ -101,38 +101,56 @@ export default function ShooterGame() {
     setGameState('ready'); // Go back to ready state, not permission
   };
 
-  // Timer countdown
+  // Timer countdown - using ref-based approach for reliability
+  const gameStartTimeRef = useRef<number | null>(null);
+  const timerAnimFrameRef = useRef<number>(0);
+
   useEffect(() => {
-    console.log('⏱️ Timer useEffect running, gameState:', gameState, 'timeRemaining:', timeRemaining);
+    console.log('⏱️ Timer useEffect running, gameState:', gameState);
 
     if (gameState !== 'playing') {
       console.log('⏱️ Not playing, skipping timer');
+      gameStartTimeRef.current = null;
+      if (timerAnimFrameRef.current) {
+        cancelAnimationFrame(timerAnimFrameRef.current);
+      }
       return;
     }
 
-    console.log('⏱️ Starting timer interval');
-    const timer = setInterval(() => {
-      console.log('⏱️ Timer tick');
-      setTimeRemaining(prev => {
-        console.log('⏱️ Timer callback, prev:', prev);
-        if (prev <= 1) {
-          // Time's up - trigger game over
-          console.log('⏱️ Time expired!');
-          stopBackgroundMusic();
-          setGameState('gameOver');
-          return 0;
-        }
-        const newTime = prev - 1;
-        console.log('⏱️ New time:', newTime);
-        return newTime;
-      });
-    }, 1000);
+    // Record start time
+    gameStartTimeRef.current = Date.now();
+    console.log('⏱️ Timer started at:', gameStartTimeRef.current);
+
+    const updateTimer = () => {
+      if (gameState !== 'playing' || !gameStartTimeRef.current) return;
+
+      const elapsed = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+      const remaining = Math.max(0, GAME_DURATION - elapsed);
+
+      console.log('⏱️ Timer update - elapsed:', elapsed, 'remaining:', remaining);
+      setTimeRemaining(remaining);
+
+      if (remaining <= 0) {
+        console.log('⏱️ Time expired!');
+        stopBackgroundMusic();
+        setGameState('gameOver');
+        return;
+      }
+
+      // Continue updating
+      timerAnimFrameRef.current = requestAnimationFrame(updateTimer);
+    };
+
+    // Start the update loop
+    timerAnimFrameRef.current = requestAnimationFrame(updateTimer);
 
     return () => {
-      console.log('⏱️ Cleaning up timer interval');
-      clearInterval(timer);
+      console.log('⏱️ Cleaning up timer');
+      if (timerAnimFrameRef.current) {
+        cancelAnimationFrame(timerAnimFrameRef.current);
+      }
     };
-  }, [gameState, stopBackgroundMusic]); // Removed timeRemaining from dependencies!
+  }, [gameState, stopBackgroundMusic]);
 
   // Detect if crosshair is hovering over a target
   useEffect(() => {
