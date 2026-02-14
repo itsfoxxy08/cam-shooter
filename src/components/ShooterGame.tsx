@@ -103,40 +103,64 @@ export default function ShooterGame() {
     setGameState('ready'); // Go back to ready state, not permission
   };
 
-  // Simple, reliable timer countdown
+  // Timer using ref to avoid closure issues
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
-    // Only run timer when playing
+    // Clear any existing timer first
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+
+    // Only start timer when playing
     if (gameState !== 'playing') {
+      console.log('⏱️ Not playing, timer not started. Game state:', gameState);
       return;
     }
 
-    console.log('⏱️ TIMER STARTED');
+    console.log('⏱️ ===== TIMER STARTING =====');
+    console.log('⏱️ Initial time:', timeRemaining);
 
-    // Simple interval that counts down every second
-    const intervalId = setInterval(() => {
-      setTimeRemaining((prevTime) => {
-        console.log('⏱️ Tick - current time:', prevTime);
+    // Start countdown
+    timerIntervalRef.current = setInterval(() => {
+      setTimeRemaining((prev) => {
+        const newTime = prev - 1;
+        console.log('⏱️ TICK:', prev, '→', newTime);
 
-        // If time is up
-        if (prevTime <= 1) {
-          console.log('⏱️ TIME IS UP!');
-          clearInterval(intervalId);
-          stopBackgroundMusic();
+        if (newTime <= 0) {
+          console.log('⏱️ ===== TIME EXPIRED =====');
+          if (timerIntervalRef.current) {
+            clearInterval(timerIntervalRef.current);
+            timerIntervalRef.current = null;
+          }
           setGameState('gameOver');
           return 0;
         }
 
-        // Decrease by 1 second
-        return prevTime - 1;
+        return newTime;
       });
-    }, 1000); // Run every 1000ms (1 second)
+    }, 1000);
 
-    // Cleanup function
+    console.log('⏱️ Interval created:', timerIntervalRef.current);
+
+    // Cleanup
     return () => {
-      console.log('⏱️ Timer cleaned up');
-      clearInterval(intervalId);
+      console.log('⏱️ Cleanup called');
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
     };
-  }, [gameState, stopBackgroundMusic]); // Only re-run if gameState changes
+  }, [gameState]); // ONLY gameState dependency
+
+  // Stop music when game ends
+  useEffect(() => {
+    if (gameState === 'gameOver') {
+      console.log('🎵 Stopping music - game over');
+      stopBackgroundMusic();
+    }
+  }, [gameState, stopBackgroundMusic]);
 
   // Detect if crosshair is hovering over a target
   useEffect(() => {
