@@ -371,8 +371,9 @@ export default function ShooterGame() {
             </button>
           )}
         </div>
+      )}
 
-        {/* Crosshair */}- Always visible */}
+      {/* Crosshair - Always visible */}
       <Crosshair
         x={handState.crosshairX}
         y={handState.crosshairY}
