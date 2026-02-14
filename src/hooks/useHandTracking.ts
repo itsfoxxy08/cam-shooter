@@ -11,7 +11,8 @@ interface HandState {
 }
 
 // Low-pass filter for smoothing (0.1 = very smooth/slow, 0.9 = responsive/jittery)
-const SMOOTHING_FACTOR = 0.2;
+// Using 0.3 for hand tracking and 0.15 for return-to-center for optimal 60fps smoothness
+const SMOOTHING_FACTOR = 0.3;
 
 function lerp(start: number, end: number, factor: number) {
   return start + (end - start) * factor;
@@ -202,13 +203,13 @@ export function useHandTracking(videoRef: RefObject<HTMLVideoElement>, isTrackin
               // Only detect bang if gun is detected
               const bang = gunDetected ? detectBang(lm, now) : false;
 
-              // Mirror X for cursor
+              // Mirror X for cursor (index finger tip)
               const targetX = 1 - lm[8].x;
               const targetY = lm[8].y;
 
-              // Smooth coordinates
-              currentX.current = lerp(currentX.current, targetX, SMOOTHING_FACTOR);
-              currentY.current = lerp(currentY.current, targetY, SMOOTHING_FACTOR);
+              // Smooth coordinates - faster smoothing for more responsive tracking
+              currentX.current = lerp(currentX.current, targetX, 0.3);
+              currentY.current = lerp(currentY.current, targetY, 0.3);
 
               setHandState({
                 isGunGesture: gunDetected,
@@ -219,9 +220,17 @@ export function useHandTracking(videoRef: RefObject<HTMLVideoElement>, isTrackin
                 rawY: targetY
               });
             } else {
-              // If hand lost, maybe keep last known position or reset?
-              // Let's keep last known pos to avoid jumping to center, but mark gesture false
-              setHandState(prev => ({ ...prev, isGunGesture: false, isBang: false }));
+              // Hand lost - smoothly return crosshair to center
+              currentX.current = lerp(currentX.current, 0.5, 0.15);
+              currentY.current = lerp(currentY.current, 0.5, 0.15);
+
+              setHandState(prev => ({
+                ...prev,
+                isGunGesture: false,
+                isBang: false,
+                crosshairX: currentX.current,
+                crosshairY: currentY.current
+              }));
             }
           }
 

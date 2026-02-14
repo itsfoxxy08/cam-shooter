@@ -154,6 +154,13 @@ export default function ShooterGame() {
         }}
       />
 
+      {/* Crosshair - Always visible */}
+      <Crosshair
+        x={handState.crosshairX}
+        y={handState.crosshairY}
+        visible={handState.isGunGesture}
+      />
+
       {/* Game Content - Only show when playing */}
       {gameState === 'playing' && (
         <>
@@ -171,13 +178,6 @@ export default function ShooterGame() {
               onComplete={() => removeBullet(bullet.id)}
             />
           ))}
-
-          {/* Crosshair */}
-          <Crosshair
-            x={handState.crosshairX}
-            y={handState.crosshairY}
-            visible={handState.isGunGesture}
-          />
 
           {/* HUD */}
           <GameHUD
