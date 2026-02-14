@@ -1,11 +1,13 @@
 import { useRef, useState, useEffect } from "react";
 import { useHandTracking } from "@/hooks/useHandTracking";
+import { useAudio } from "@/hooks/useAudio";
 import Crosshair from "./Crosshair";
 import Target from "./Target";
 import GameHUD from "./GameHUD";
 import StartMenu from "./StartMenu";
 import PermissionModal from "./PermissionModal";
 import Bullet from "./Bullet";
+import GameOverModal from "./GameOverModal";
 
 interface TargetState {
   id: number;
@@ -22,8 +24,10 @@ interface BulletState {
 
 const HIT_RADIUS = 0.08; // % of screen (Increased slightly for easier hits)
 const HOVER_RADIUS = 0.08; // Match hit radius - only glow when actually on target
+const GAME_DURATION = 30; // seconds
+const MIN_SHOTS_REQUIRED = 10;
 
-type GameState = 'start' | 'permission' | 'playing';
+type GameState = 'start' | 'permission' | 'playing' | 'gameOver';
 
 export default function ShooterGame() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -33,11 +37,16 @@ export default function ShooterGame() {
   const isTrackingEnabled = gameState === 'permission' || gameState === 'playing';
 
   const { handState, isLoading, error, permissionGranted } = useHandTracking(videoRef, isTrackingEnabled);
+  const { playShoot, playBackgroundMusic, stopBackgroundMusic, toggleMute, isMuted } = useAudio();
 
   const [score, setScore] = useState(0);
   const [targets, setTargets] = useState<TargetState[]>([]);
   const [bullets, setBullets] = useState<BulletState[]>([]);
   const [isHoveringTarget, setIsHoveringTarget] = useState(false);
+
+  // Timer and shot tracking
+  const [timeRemaining, setTimeRemaining] = useState(GAME_DURATION);
+  const [shotsFired, setShotsFired] = useState(0);
 
   const nextTargetIdRef = useRef(0);
   const nextBulletIdRef = useRef(0);
@@ -46,8 +55,13 @@ export default function ShooterGame() {
   useEffect(() => {
     if (gameState === 'permission' && permissionGranted) {
       setGameState('playing');
+      // Start background music
+      playBackgroundMusic();
+      // Reset timer and shots
+      setTimeRemaining(GAME_DURATION);
+      setShotsFired(0);
     }
-  }, [gameState, permissionGranted]);
+  }, [gameState, permissionGranted, playBackgroundMusic]);
 
   const handleStartGame = () => {
     setGameState('permission');
@@ -55,31 +69,34 @@ export default function ShooterGame() {
 
   const handleRequestPermission = () => {
     // This is handled by useHandTracking when isTrackingEnabled becomes true
-    // But we might need to re-trigger if it failed or permission was denied previously?
-    // For now, setting state to permission triggers the hook to try.
   };
 
-  // Spawn targets periodically
+  const handleRestart = () => {
+    setScore(0);
+    setTargets([]);
+    setBullets([]);
+    setTimeRemaining(GAME_DURATION);
+    setShotsFired(0);
+    setGameState('permission');
+  };
+
+  // Timer countdown
   useEffect(() => {
-    if (gameState !== 'playing' || isLoading || error) return;
+    if (gameState !== 'playing') return;
 
-    const interval = setInterval(() => {
-      const newTarget: TargetState = {
-        id: nextTargetIdRef.current++,
-        x: 0.15 + Math.random() * 0.7,
-        y: 0.15 + Math.random() * 0.6,
-        isHit: false,
-      };
-      setTargets(prev => {
-        // Keep max 4 active targets
-        const active = prev.filter(t => !t.isHit);
-        if (active.length >= 4) return prev;
-        return [...prev.filter(t => !t.isHit), newTarget];
-      });
-    }, 2000);
+    if (timeRemaining <= 0) {
+      // Time's up - check if passed
+      stopBackgroundMusic();
+      setGameState('gameOver');
+      return;
+    }
 
-    return () => clearInterval(interval);
-  }, [gameState, isLoading, error]);
+    const timer = setInterval(() => {
+      setTimeRemaining(prev => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [gameState, timeRemaining, stopBackgroundMusic]);
 
   // Detect if crosshair is hovering over a target
   useEffect(() => {
@@ -115,6 +132,12 @@ export default function ShooterGame() {
     if (gameState !== 'playing') return;
     if (!handState.isBang || !handState.isGunGesture) return;
 
+    // Play shoot sound
+    playShoot();
+
+    // Increment shots fired
+    setShotsFired(prev => prev + 1);
+
     // Create a bullet visual
     const newBullet = {
       id: nextBulletIdRef.current++,
@@ -143,11 +166,34 @@ export default function ShooterGame() {
       if (hit) setScore(s => s + 1);
       return updated;
     });
-  }, [handState.isBang, gameState]); // Added gameState dependency
+  }, [handState.isBang, gameState, playShoot]);
 
   const removeBullet = (id: number) => {
     setBullets(prev => prev.filter(b => b.id !== id));
   };
+
+  // Spawn targets periodically
+  useEffect(() => {
+    if (gameState !== 'playing') return;
+
+    const spawnTarget = () => {
+      const newTarget: TargetState = {
+        id: nextTargetIdRef.current++,
+        x: 0.15 + Math.random() * 0.7,
+        y: 0.2 + Math.random() * 0.6,
+        isHit: false,
+      };
+      setTargets(prev => {
+        const active = prev.filter(t => !t.isHit);
+        if (active.length >= 4) return prev;
+        return [...active, newTarget];
+      });
+    };
+
+    spawnTarget();
+    const interval = setInterval(spawnTarget, 2000);
+    return () => clearInterval(interval);
+  }, [gameState]);
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-background">
@@ -155,6 +201,9 @@ export default function ShooterGame() {
       {gameState === 'start' && <StartMenu onStart={handleStartGame} />}
       {gameState === 'permission' && !permissionGranted && !error && (
         <PermissionModal onRequestPermission={handleRequestPermission} />
+      )}
+      {gameState === 'gameOver' && (
+        <GameOverModal shotsFired={shotsFired} onRestart={handleRestart} />
       )}
 
       {/* Camera feed */}
@@ -176,6 +225,30 @@ export default function ShooterGame() {
           backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, hsl(var(--foreground)) 2px, hsl(var(--foreground)) 4px)",
         }}
       />
+
+      {/* Timer and Shots Display - Top Center */}
+      {gameState === 'playing' && (
+        <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-40 bg-black/70 border-2 border-cyan-400 rounded-lg px-8 py-4 backdrop-blur-sm"
+          style={{ boxShadow: "0 0 20px rgba(0, 255, 255, 0.5)" }}>
+          <div className="flex items-center gap-8">
+            <div className="text-center">
+              <div className="text-cyan-400 text-sm font-semibold">TIME</div>
+              <div className={`text-4xl font-bold ${timeRemaining <= 10 ? 'text-red-400 animate-pulse' : 'text-cyan-400'}`}
+                style={{ textShadow: "0 0 10px currentColor" }}>
+                {timeRemaining}s
+              </div>
+            </div>
+            <div className="w-px h-12 bg-cyan-400/30" />
+            <div className="text-center">
+              <div className="text-cyan-400 text-sm font-semibold">SHOTS</div>
+              <div className={`text-4xl font-bold ${shotsFired >= MIN_SHOTS_REQUIRED ? 'text-green-400' : 'text-cyan-400'}`}
+                style={{ textShadow: "0 0 10px currentColor" }}>
+                {shotsFired}/{MIN_SHOTS_REQUIRED}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Crosshair - Always visible */}
       <Crosshair

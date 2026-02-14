@@ -39,18 +39,39 @@ const Crosshair = memo(({ x, y, visible, isHoveringTarget }: CrosshairProps) => 
         transform: "translate(-50%, -50%)",
       }}
     >
-      {/* Outer ring */}
-      <div className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-primary neon-border transition-all duration-200 ${hoverRingClasses}`} />
-      {/* Inner dot */}
+      {/* Outer ring - Glowing cyan */}
       <div
-        className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary transition-all duration-200 ${hoverDotClasses}`}
-        style={{ boxShadow: (visible || isHoveringTarget) ? "var(--neon-glow)" : "none" }}
+        className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-cyan-400 transition-all duration-200 ${hoverRingClasses}`}
+        style={{
+          boxShadow: visible || isHoveringTarget ? "0 0 15px rgba(0, 255, 255, 0.8), 0 0 30px rgba(0, 255, 255, 0.4)" : "none"
+        }}
       />
-      {/* Cross lines */}
-      <div className={`absolute w-6 h-0.5 bg-primary -translate-x-[calc(50%+20px)] -translate-y-1/2 transition-all duration-200 ${hoverLineClasses}`} />
-      <div className={`absolute w-6 h-0.5 bg-primary translate-x-[8px] -translate-y-1/2 transition-all duration-200 ${hoverLineClasses}`} />
-      <div className={`absolute h-6 w-0.5 bg-primary -translate-x-1/2 -translate-y-[calc(50%+20px)] transition-all duration-200 ${hoverLineClasses}`} />
-      <div className={`absolute h-6 w-0.5 bg-primary -translate-x-1/2 translate-y-[8px] transition-all duration-200 ${hoverLineClasses}`} />
+
+      {/* Inner dot - Bright cyan */}
+      <div
+        className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-400 transition-all duration-200 ${hoverDotClasses}`}
+        style={{
+          boxShadow: visible || isHoveringTarget ? "0 0 10px rgba(0, 255, 255, 1), 0 0 20px rgba(0, 255, 255, 0.6)" : "none"
+        }}
+      />
+
+      {/* Cross lines - Cyan glow */}
+      <div
+        className={`absolute w-6 h-0.5 bg-cyan-400 -translate-x-[calc(50%+20px)] -translate-y-1/2 transition-all duration-200 ${hoverLineClasses}`}
+        style={{ boxShadow: visible ? "0 0 5px rgba(0, 255, 255, 0.6)" : "none" }}
+      />
+      <div
+        className={`absolute w-6 h-0.5 bg-cyan-400 translate-x-[calc(50%-4px)] -translate-y-1/2 transition-all duration-200 ${hoverLineClasses}`}
+        style={{ boxShadow: visible ? "0 0 5px rgba(0, 255, 255, 0.6)" : "none" }}
+      />
+      <div
+        className={`absolute h-6 w-0.5 bg-cyan-400 -translate-x-1/2 -translate-y-[calc(50%+20px)] transition-all duration-200 ${hoverLineClasses}`}
+        style={{ boxShadow: visible ? "0 0 5px rgba(0, 255, 255, 0.6)" : "none" }}
+      />
+      <div
+        className={`absolute h-6 w-0.5 bg-cyan-400 -translate-x-1/2 translate-y-[calc(50%-4px)] transition-all duration-200 ${hoverLineClasses}`}
+        style={{ boxShadow: visible ? "0 0 5px rgba(0, 255, 255, 0.6)" : "none" }}
+      />
     </div>
   );
 });
