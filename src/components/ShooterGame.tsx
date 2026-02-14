@@ -8,6 +8,7 @@ import StartMenu from "./StartMenu";
 import PermissionModal from "./PermissionModal";
 import Bullet from "./Bullet";
 import GameOverModal from "./GameOverModal";
+import ReadyScreen from "./ReadyScreen";
 
 interface TargetState {
   id: number;
@@ -26,15 +27,16 @@ const HIT_RADIUS = 0.08; // % of screen (Increased slightly for easier hits)
 const HOVER_RADIUS = 0.08; // Match hit radius - only glow when actually on target
 const GAME_DURATION = 30; // seconds
 const MIN_SHOTS_REQUIRED = 10;
+const POINTS_PER_HIT = 10; // 10 points per successful hit
 
-type GameState = 'start' | 'permission' | 'playing' | 'gameOver';
+type GameState = 'start' | 'permission' | 'ready' | 'playing' | 'gameOver';
 
 export default function ShooterGame() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [gameState, setGameState] = useState<GameState>('start');
 
-  // Only enable tracking when we are in the permission phase or playing
-  const isTrackingEnabled = gameState === 'permission' || gameState === 'playing';
+  // Only enable tracking when we are in the permission phase or later
+  const isTrackingEnabled = gameState === 'permission' || gameState === 'ready' || gameState === 'playing';
 
   const { handState, isLoading, error, permissionGranted } = useHandTracking(videoRef, isTrackingEnabled);
   const { playShoot, playBackgroundMusic, stopBackgroundMusic, toggleMute, isMuted } = useAudio();
@@ -50,18 +52,15 @@ export default function ShooterGame() {
 
   const nextTargetIdRef = useRef(0);
   const nextBulletIdRef = useRef(0);
+  const lastBangTimestamp = useRef(0); // Track last bang to prevent multiple counts
 
   // Handle Game State Transitions
   useEffect(() => {
     if (gameState === 'permission' && permissionGranted) {
-      setGameState('playing');
-      // Start background music
-      playBackgroundMusic();
-      // Reset timer and shots
-      setTimeRemaining(GAME_DURATION);
-      setShotsFired(0);
+      // Move to ready state, don't start game yet
+      setGameState('ready');
     }
-  }, [gameState, permissionGranted, playBackgroundMusic]);
+  }, [gameState, permissionGranted]);
 
   const handleStartGame = () => {
     setGameState('permission');
@@ -71,13 +70,26 @@ export default function ShooterGame() {
     // This is handled by useHandTracking when isTrackingEnabled becomes true
   };
 
+  const handleBeginGame = () => {
+    // Called when user clicks "Start Game" button in ready state
+    setGameState('playing');
+    // Start background music
+    playBackgroundMusic();
+    // Reset timer and shots
+    setTimeRemaining(GAME_DURATION);
+    setShotsFired(0);
+    setScore(0);
+    setTargets([]);
+    setBullets([]);
+  };
+
   const handleRestart = () => {
     setScore(0);
     setTargets([]);
     setBullets([]);
     setTimeRemaining(GAME_DURATION);
     setShotsFired(0);
-    setGameState('permission');
+    setGameState('ready'); // Go back to ready state, not permission
   };
 
   // Timer countdown
@@ -132,10 +144,20 @@ export default function ShooterGame() {
     if (gameState !== 'playing') return;
     if (!handState.isBang || !handState.isGunGesture) return;
 
+    // Check if this is a new bang event (prevent counting same bang multiple times)
+    const currentTime = Date.now();
+    if (currentTime - lastBangTimestamp.current < 100) {
+      // Same bang event, ignore (within 100ms of last bang)
+      return;
+    }
+
+    // Update timestamp for this new bang
+    lastBangTimestamp.current = currentTime;
+
     // Play shoot sound
     playShoot();
 
-    // Increment shots fired
+    // Increment shots fired - ONLY ONCE per bang
     setShotsFired(prev => prev + 1);
 
     // Create a bullet visual
@@ -153,8 +175,6 @@ export default function ShooterGame() {
         if (target.isHit) return target;
         const dx = target.x - handState.crosshairX;
         const dy = target.y - handState.crosshairY;
-        // Aspect ratio correction potentially needed? Assuming 16:9 roughly or relative coords
-        // Actually both are 0-1, so plain distance is fine for now
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist < HIT_RADIUS && !hit) {
@@ -163,7 +183,8 @@ export default function ShooterGame() {
         }
         return target;
       });
-      if (hit) setScore(s => s + 1);
+      // Award 10 points per hit
+      if (hit) setScore(s => s + POINTS_PER_HIT);
       return updated;
     });
   }, [handState.isBang, gameState, playShoot]);
@@ -201,6 +222,9 @@ export default function ShooterGame() {
       {gameState === 'start' && <StartMenu onStart={handleStartGame} />}
       {gameState === 'permission' && !permissionGranted && !error && (
         <PermissionModal onRequestPermission={handleRequestPermission} />
+      )}
+      {gameState === 'ready' && (
+        <ReadyScreen onBeginGame={handleBeginGame} />
       )}
       {gameState === 'gameOver' && (
         <GameOverModal shotsFired={shotsFired} onRestart={handleRestart} />
