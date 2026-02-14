@@ -72,15 +72,24 @@ export default function ShooterGame() {
 
   const handleBeginGame = () => {
     // Called when user clicks "Start Game" button in ready state
-    setGameState('playing');
-    // Start background music
-    playBackgroundMusic();
-    // Reset timer and hits
+    console.log('🎮 handleBeginGame called');
+
+    // IMPORTANT: Reset all game state FIRST before transitioning to 'playing'
+    // This ensures timer starts with the correct initial time
+    console.log('🎮 Resetting game state');
     setTimeRemaining(GAME_DURATION);
     setTargetsHit(0);
     setScore(0);
     setTargets([]);
     setBullets([]);
+
+    // Now transition to playing - this will start the timer
+    console.log('🎮 Setting gameState to playing');
+    setGameState('playing');
+
+    // Start background music
+    playBackgroundMusic();
+    console.log('🎮 handleBeginGame complete');
   };
 
   const handleRestart = () => {
@@ -94,21 +103,35 @@ export default function ShooterGame() {
 
   // Timer countdown
   useEffect(() => {
-    if (gameState !== 'playing') return;
+    console.log('⏱️ Timer useEffect running, gameState:', gameState, 'timeRemaining:', timeRemaining);
 
+    if (gameState !== 'playing') {
+      console.log('⏱️ Not playing, skipping timer');
+      return;
+    }
+
+    console.log('⏱️ Starting timer interval');
     const timer = setInterval(() => {
+      console.log('⏱️ Timer tick');
       setTimeRemaining(prev => {
+        console.log('⏱️ Timer callback, prev:', prev);
         if (prev <= 1) {
           // Time's up - trigger game over
+          console.log('⏱️ Time expired!');
           stopBackgroundMusic();
           setGameState('gameOver');
           return 0;
         }
-        return prev - 1;
+        const newTime = prev - 1;
+        console.log('⏱️ New time:', newTime);
+        return newTime;
       });
     }, 1000);
 
-    return () => clearInterval(timer);
+    return () => {
+      console.log('⏱️ Cleaning up timer interval');
+      clearInterval(timer);
+    };
   }, [gameState, stopBackgroundMusic]); // Removed timeRemaining from dependencies!
 
   // Detect if crosshair is hovering over a target
