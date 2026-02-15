@@ -6,37 +6,49 @@ interface ReadyScreenProps {
 
 const ReadyScreen = memo(({ onBeginGame }: ReadyScreenProps) => {
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-            <div className="text-center space-y-8 px-8">
-                <div className="space-y-4">
-                    <h1 className="text-6xl font-bold text-cyan-400 animate-pulse"
-                        style={{ textShadow: "0 0 30px rgba(0, 255, 255, 0.8)" }}>
-                        READY!
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md">
+            <div className="text-center space-y-6 px-8 max-w-md">
+                {/* Header */}
+                <div className="space-y-2">
+                    <h1 className="text-5xl font-bold text-cyan-400">
+                        READY
                     </h1>
-                    <p className="text-2xl text-cyan-300">
-                        Camera access granted
-                    </p>
+                    <p className="text-lg text-gray-400">Camera access granted</p>
                 </div>
 
-                <div className="bg-black/50 border-2 border-cyan-400/50 rounded-lg p-6 max-w-md mx-auto">
-                    <h2 className="text-cyan-400 text-xl font-semibold mb-4">CHALLENGE</h2>
-                    <div className="space-y-2 text-gray-300">
-                        <p>⏱️ <span className="text-white font-bold">30 seconds</span> on the clock</p>
-                        <p>🎯 Shoot <span className="text-white font-bold">10 targets</span> minimum</p>
-                        <p>💎 <span className="text-white font-bold">10 points</span> per hit</p>
+                {/* Challenge info box */}
+                <div className="bg-gray-900/80 border border-cyan-400/30 rounded-2xl p-6">
+                    <h2 className="text-cyan-400 text-lg font-semibold mb-4 uppercase tracking-wider">Mission Briefing</h2>
+                    <div className="space-y-3 text-gray-300">
+                        <div className="flex items-center justify-between py-2 border-b border-gray-800">
+                            <span className="text-sm">Duration</span>
+                            <span className="text-white font-bold">30s</span>
+                        </div>
+                        <div className="flex items-center justify-between py-2 border-b border-gray-800">
+                            <span className="text-sm">Target Goal</span>
+                            <span className="text-white font-bold">10+ hits</span>
+                        </div>
+                        <div className="flex items-center justify-between py-2">
+                            <span className="text-sm">Points</span>
+                            <span className="text-green-400 font-bold">+10</span>
+                        </div>
+                        <div className="flex items-center justify-between py-2">
+                            <span className="text-sm">Penalty</span>
+                            <span className="text-red-400 font-bold">-10</span>
+                        </div>
                     </div>
                 </div>
 
+                {/* Start button */}
                 <button
                     onClick={onBeginGame}
-                    className="bg-cyan-500 hover:bg-cyan-600 text-black font-bold text-2xl py-4 px-12 rounded-lg transition-all duration-200 shadow-lg hover:shadow-cyan-400/50 animate-pulse"
-                    style={{ boxShadow: "0 0 30px rgba(0, 255, 255, 0.6)" }}
+                    className="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xl py-4 px-12 rounded-xl transition-all duration-200"
                 >
-                    ▶ START GAME
+                    ▶ START MISSION
                 </button>
 
-                <p className="text-sm text-gray-500">
-                    Make a finger gun gesture to aim and shoot
+                <p className="text-xs text-gray-500 uppercase tracking-wide">
+                    Make finger gun gesture to aim
                 </p>
             </div>
         </div>

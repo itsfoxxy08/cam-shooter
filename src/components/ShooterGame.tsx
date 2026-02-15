@@ -364,7 +364,7 @@ export default function ShooterGame() {
           {(gameState === 'playing' || gameState === 'ready') && (
             <button
               onClick={toggleFullscreen}
-              className="absolute top-4 right-4 z-50 bg-black/60 hover:bg-cyan-500/20 border border-cyan-400/50 rounded-lg p-2.5 transition-all duration-200"
+              className="absolute bottom-4 right-4 z-50 bg-black/60 hover:bg-cyan-500/20 border border-cyan-400/50 rounded-lg p-2.5 transition-all duration-200"
               aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
             >
               {isFullscreen ? (

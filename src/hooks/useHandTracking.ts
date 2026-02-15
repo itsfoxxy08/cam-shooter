@@ -194,9 +194,12 @@ export function useHandTracking(videoRef: RefObject<HTMLVideoElement>, isTrackin
         handLandmarkerRef.current = handLandmarker;
 
         // Start camera
+        console.log('📷 Requesting camera permission...');
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "user", width: 1280, height: 720 },
         });
+
+        console.log('✅ Camera permission granted');
 
         if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
 
@@ -316,8 +319,15 @@ export function useHandTracking(videoRef: RefObject<HTMLVideoElement>, isTrackin
         detect();
       } catch (err: any) {
         if (!cancelled) {
-          console.error(err);
-          setError(err.message || "Failed to initialize hand tracking");
+          console.error('❌ Camera error:', err);
+          // Better error messages for common issues
+          if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            setError("Camera permission denied. Please allow camera access and refresh.");
+          } else if (err.name === 'NotFoundError') {
+            setError("No camera found. Please connect a camera and refresh.");
+          } else {
+            setError(err.message || "Failed to initialize hand tracking");
+          }
           setIsLoading(false);
         }
       }
