@@ -47,3 +47,19 @@ code {
 .neon-border {
     box-shadow: var(--neon-glow);
 }
+
+/* Prevent scaling in fullscreen mode on mobile */
+@media (max-width: 768px) {
+
+    html:fullscreen,
+    html:-webkit-full-screen,
+    html:-moz-full-screen {
+        /* Lock font size to prevent automatic scaling */
+        font-size: 16px !important;
+    }
+
+    /* Ensure targets and game elements maintain size */
+    :fullscreen * {
+        transform: none !important;
+    }
+}
