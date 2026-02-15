@@ -16,7 +16,21 @@ export function useFullscreen() {
         try {
             if (!document.fullscreenElement) {
                 await document.documentElement.requestFullscreen();
+
+                // Lock orientation to landscape on mobile
+                if (screen.orientation && screen.orientation.lock) {
+                    try {
+                        await screen.orientation.lock('landscape');
+                        console.log('📱 Screen locked to landscape');
+                    } catch (orientErr) {
+                        console.log('⚠️ Could not lock orientation:', orientErr);
+                    }
+                }
             } else {
+                // Unlock orientation when exiting fullscreen
+                if (screen.orientation && screen.orientation.unlock) {
+                    screen.orientation.unlock();
+                }
                 await document.exitFullscreen();
             }
         } catch (err) {
