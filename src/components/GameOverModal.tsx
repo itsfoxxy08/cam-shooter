@@ -16,102 +16,88 @@ const GameOverModal = memo(({ targetsHit, score, onRestart }: GameOverModalProps
 
     if (targetsHit < minHits) {
         stars = 1;
-        rating = "Game Over!";
+        rating = "Mission Failed";
         passed = false;
     } else if (targetsHit < 15) {
         stars = 2;
-        rating = "Good!";
+        rating = "Adequate";
         passed = true;
     } else if (targetsHit < 20) {
         stars = 3;
-        rating = "Great!";
+        rating = "Proficient";
         passed = true;
     } else if (targetsHit < 25) {
         stars = 4;
-        rating = "Excellent!";
+        rating = "Expert";
         passed = true;
     } else {
         stars = 5;
-        rating = "Perfect!";
+        rating = "Elite Marksman";
         passed = true;
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-            <div className="bg-gradient-to-br from-gray-900 to-blue-900 border-2 border-cyan-400 rounded-lg p-8 max-w-md w-full mx-4 shadow-[0_0_30px_rgba(0,255,255,0.5)]">
-                <h2 className="text-4xl font-bold text-center mb-2 text-cyan-400"
-                    style={{ textShadow: "0 0 20px rgba(0, 255, 255, 0.8)" }}>
-                    {passed ? "YOU WON!" : "GAME OVER!"}
-                </h2>
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-4">
+            {/* Main stats container */}
+            <div className="bg-gray-900/95 border border-cyan-400/30 rounded-2xl p-6 max-w-sm w-full shadow-lg">
+                {/* Header */}
+                <div className="text-center mb-6">
+                    <h2 className="text-3xl font-bold mb-1 text-cyan-400">
+                        {passed ? "MISSION COMPLETE" : "MISSION FAILED"}
+                    </h2>
+                    <p className="text-sm text-gray-400 uppercase tracking-wider">{rating}</p>
+                </div>
 
-                {/* Rating text */}
-                <p className={`text - center text - 2xl font - bold mb - 4 ${passed ? 'text-green-400' : 'text-red-400'
-                    } `}>
-                    {rating}
-                </p>
-
-                {/* Star Rating */}
-                <div className="flex justify-center gap-2 mb-6">
+                {/* Star Rating - minimal */}
+                <div className="flex justify-center gap-1 mb-6">
                     {[1, 2, 3, 4, 5].map((starNum) => (
                         <span
                             key={starNum}
-                            className={`text - 4xl ${starNum <= stars ? 'text-yellow-400' : 'text-gray-600'} `}
-                            style={starNum <= stars ? {
-                                textShadow: "0 0 10px rgba(250, 204, 21, 0.8)",
-                                filter: "drop-shadow(0 0 5px rgba(250, 204, 21, 0.5))"
-                            } : {}}
+                            className={`text-2xl ${starNum <= stars ? 'text-cyan-400' : 'text-gray-700'}`}
                         >
-                            ★
+                            ●
                         </span>
                     ))}
                 </div>
 
-
-                <div className="space-y-4 mb-8">
-                    <div className="bg-black/50 border border-cyan-400/30 rounded p-4">
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="text-gray-300">Targets Hit:</span>
-                            <span className={`text - 2xl font - bold ${passed ? 'text-green-400' : 'text-red-400'} `}>
-                                {targetsHit}
-                            </span>
-                        </div>
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="text-gray-300">Required:</span>
-                            <span className="text-xl font-bold text-cyan-400">{minHits}</span>
-                        </div>
-                        <div className="flex justify-between items-center pt-2 border-t border-cyan-400/20">
-                            <span className="text-gray-300">Final Score:</span>
-                            <span className="text-2xl font-bold text-yellow-400"
-                                style={{ textShadow: "0 0 10px rgba(250, 204, 21, 0.6)" }}>
-                                {score}
-                            </span>
-                        </div>
+                {/* Stats */}
+                <div className="space-y-3 mb-4">
+                    <div className="flex justify-between items-center py-2 border-b border-gray-800">
+                        <span className="text-gray-400 text-sm uppercase tracking-wide">Targets</span>
+                        <span className={`text-xl font-bold ${passed ? 'text-green-400' : 'text-red-400'}`}>
+                            {targetsHit}/{minHits}
+                        </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2">
+                        <span className="text-gray-400 text-sm uppercase tracking-wide">Score</span>
+                        <span className="text-xl font-bold text-cyan-400">{score}</span>
                     </div>
                 </div>
 
+                {/* Status message */}
                 {!passed && (
-                    <div className="bg-red-900/30 border border-red-500/50 rounded p-4 text-center">
-                        <p className="text-red-300 font-semibold">
-                            ⚠️ Failed! You needed {minHits - targetsHit} more hit{minHits - targetsHit !== 1 ? 's' : ''}!
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-center">
+                        <p className="text-red-400 text-sm">
+                            Need {minHits - targetsHit} more target{minHits - targetsHit !== 1 ? 's' : ''}
                         </p>
                     </div>
                 )}
 
-                {passed && (
-                    <div className="bg-green-900/30 border border-green-500/50 rounded p-4 text-center">
-                        <p className="text-green-300 font-semibold">
-                            ✅ Challenge Complete! {targetsHit - minHits} bonus hit{targetsHit - minHits !== 1 ? 's' : ''}!
+                {passed && targetsHit > minHits && (
+                    <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-3 text-center">
+                        <p className="text-cyan-400 text-sm">
+                            +{targetsHit - minHits} bonus hit{targetsHit - minHits !== 1 ? 's' : ''}
                         </p>
                     </div>
                 )}
             </div>
 
+            {/* Try Again button - outside the box */}
             <button
                 onClick={onRestart}
-                className="w-full bg-cyan-500 hover:bg-cyan-600 text-black font-bold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-cyan-400/50"
-                style={{ boxShadow: "0 0 20px rgba(0, 255, 255, 0.5)" }}
+                className="mt-4 bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-3 px-8 rounded-xl transition-all duration-200 max-w-sm w-full"
             >
-                {passed ? "🔄 PLAY AGAIN" : "Try Again"}
+                {passed ? "▶ PLAY AGAIN" : "↻ TRY AGAIN"}
             </button>
         </div>
     );
@@ -120,3 +106,4 @@ const GameOverModal = memo(({ targetsHit, score, onRestart }: GameOverModalProps
 GameOverModal.displayName = "GameOverModal";
 
 export default GameOverModal;
+

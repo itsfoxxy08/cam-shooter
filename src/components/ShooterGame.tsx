@@ -236,7 +236,18 @@ export default function ShooterGame() {
       if (hit) {
         // Hit a target: +10 points and increment hits counter
         setScore(s => s + POINTS_PER_HIT);
-        setTargetsHit(prev => prev + 1);
+        setTargetsHit(prev => {
+          const newCount = prev + 1;
+
+          // Award time bonus at 10 targets
+          if (newCount === 10 && !timeBonusGiven) {
+            setTimeRemaining(time => time + 15);
+            setTimeBonusGiven(true);
+            console.log('🎁 TIME BONUS! +15 seconds');
+          }
+
+          return newCount;
+        });
       } else {
         // Missed shot: -10 points (but don't go below 0)
         setScore(s => Math.max(0, s - 10));
@@ -353,18 +364,17 @@ export default function ShooterGame() {
           {(gameState === 'playing' || gameState === 'ready') && (
             <button
               onClick={toggleFullscreen}
-              className="absolute bottom-8 right-8 z-50 bg-black/50 hover:bg-cyan-500/20 border-2 border-cyan-400 rounded-lg p-3 transition-all duration-200"
-              style={{ boxShadow: "0 0 15px rgba(0, 255, 255, 0.5)" }}
+              className="absolute top-4 right-4 z-50 bg-black/60 hover:bg-cyan-500/20 border border-cyan-400/50 rounded-lg p-2.5 transition-all duration-200"
               aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
             >
               {isFullscreen ? (
                 // Compress icon (exit fullscreen)
-                <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M15 9h4.5M15 9V4.5M15 9l5.25-5.25M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
                 </svg>
               ) : (
                 // Expand icon (enter fullscreen)
-                <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5h-4m4 0v-4m0 4l-5-5" />
                 </svg>
               )}
